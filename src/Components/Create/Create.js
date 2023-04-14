@@ -1,8 +1,41 @@
-import React, { Fragment } from 'react';
-import './Create.css';
-import Header from '../Header/Header';
-
+import React, { Fragment, useContext, useState } from "react";
+import "./Create.css";
+import Header from "../Header/Header";
+import { useForm } from "./Customhook";
+import { AuthContext, FirebaseContext } from "../../Store/firebaseContex";
+import {useHistory} from 'react-router-dom'
 const Create = () => {
+  const history =useHistory()
+  const [image, setimage] = useState(null);
+  const { user } = useContext(AuthContext);
+  const { firebase } = useContext(FirebaseContext);
+  const [values, handleChange] = useForm({
+    Name: "",
+    Price: "",
+    category: "",
+  });
+  const date = new Date();
+  const handleSubmit = () => {
+    firebase
+      .storage()
+      .ref(`image/${image.name}`)
+      .put(image)
+      .then(({ ref }) => {
+        ref.getDownloadURL().then((url) => {
+          console.log(url);
+          firebase.firestore().collection("products").add({
+            name: values.Name,
+            category: values.category,
+            price: values.Price,
+            url: url,
+            userId: user.uid,
+            createdAt: date.toDateString(),
+          });
+         
+        });
+      });
+      history.push('/')
+  };
   return (
     <Fragment>
       <Header />
@@ -14,9 +47,10 @@ const Create = () => {
             <input
               className="input"
               type="text"
-              id="fname"
+              id="Name"
               name="Name"
-              defaultValue="John"
+              value={values.Name}
+              onChange={handleChange}
             />
             <br />
             <label htmlFor="fname">Category</label>
@@ -24,24 +58,43 @@ const Create = () => {
             <input
               className="input"
               type="text"
-              id="fname"
+              id="category"
               name="category"
-              defaultValue="John"
+              value={values.category}
+              onChange={handleChange}
             />
             <br />
             <label htmlFor="fname">Price</label>
             <br />
-            <input className="input" type="number" id="fname" name="Price" />
+            <input
+              className="input"
+              type="number"
+              id="price"
+              name="Price"
+              value={values.Price}
+              onChange={handleChange}
+            />
             <br />
           </form>
           <br />
-          <img alt="Posts" width="200px" height="200px" src=""></img>
-          <form>
-            <br />
-            <input type="file" />
-            <br />
-            <button className="uploadBtn">upload and Submit</button>
-          </form>
+          <img
+            alt="Posts"
+            width="200px"
+            height="200px"
+            src={image ? URL.createObjectURL(image) : ""}
+          ></img>
+
+          <br />
+          <input
+            type="file"
+            onChange={(e) => {
+              setimage(e.target.files[0]);
+            }}
+          />
+          <br />
+          <button onClick={handleSubmit} className="uploadBtn">
+            upload and Submit
+          </button>
         </div>
       </card>
     </Fragment>
